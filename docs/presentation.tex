@@ -1,0 +1,151 @@
+\documentclass{beamer}
+
+% --- Theme Selection ---
+\usetheme{Madrid}
+\usecolortheme{whale}
+
+% --- Packages ---
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{listings}
+\usepackage{hyperref}
+
+% --- Code Snippet Styling ---
+\lstset{
+    basicstyle=\ttfamily\scriptsize,
+    breaklines=true,
+    backgroundcolor=\color{gray!10},
+    frame=single,
+    keywordstyle=\color{blue},
+    commentstyle=\color{green!50!black}
+}
+
+% --- Metadata ---
+\title[Visual Docking Station]{Autonomous Visual Docking Station}
+\subtitle{Precision Navigation with ROS 2 Jazzy \& Gazebo Harmonic}
+\author{Presented by Project Team}
+\date{March 2026}
+
+\begin{document}
+
+% --- Title Slide ---
+\begin{frame}
+    \titlepage
+\end{frame}
+
+% --- Slide 1: Objectives ---
+\begin{frame}{Project Objectives}
+    \begin{itemize}
+        \item \textbf{Autonomous Homing:} Robot must locate and navigate to a docking station from any room position.
+        \item \textbf{Visual Perception:} Utilize ArUco markers for robust 6-DOF pose estimation.
+        \item \textbf{Precision Control:} Implement a state-machine driven controller for smooth approach and docking.
+        \item \textbf{Simulation Fidelity:} High-accuracy physics modeling in Gazebo Harmonic.
+    \end{itemize}
+\end{frame}
+
+% --- Slide 2: System Architecture ---
+\begin{frame}{System Architecture}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \textbf{Core Stack:}
+            \begin{itemize}
+                \item OS: Ubuntu 24.04 (Noble)
+                \item ROS 2 Jazzy Jalisco
+                \item Gazebo Harmonic
+            \end{itemize}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \textbf{Key ROS Nodes:}
+            \begin{itemize}
+                \item \texttt{aruco\_detector\_node}: OpenCV-based vision
+                \item \texttt{dock\_controller}: 3-phase controller
+                \item \texttt{ros\_gz\_bridge}: Middleware bridge
+            \end{itemize}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+% --- Slide 3: Environment Design ---
+\begin{frame}{Simulation Environment}
+    \begin{itemize}
+        \item \textbf{Room Layout:} 8m $\times$ 6m interior with alcove.
+        \item \textbf{Docking Target:} ArUco Marker ID 0 (DICT\_4X4\_50).
+        \item \textbf{Lighting:} Point lights optimized for camera contrast.
+    \end{itemize}
+    \begin{block}{The Alcove}
+        The docking platform is recessed 1.9m into an alcove to simulate realistic indoor constraints.
+    \end{block}
+\end{frame}
+
+% --- Slide 4: Robot Modeling (SDF) ---
+\begin{frame}{Robot Modeling \& Physics}
+    \begin{itemize}
+        \item \textbf{Kinematics:} Differential-drive system.
+        \item \textbf{Hardware:}
+            \begin{itemize}
+                \item Dual motorized wheels.
+                \item Low-friction ball caster ($\mu = 0$).
+                \item Forward RGB Camera (640$\times$480).
+            \end{itemize}
+        \item \textbf{Logic:} Defined in native SDF version 1.9 for direct Gazebo compatibility.
+    \end{itemize}
+\end{frame}
+
+% --- Slide 5: Perception Logic ---
+\begin{frame}[fragile]{Perception: ArUco Tracking}
+\begin{lstlisting}[language=Python]
+# OpenCV Detection Flow
+detector = aruco.ArucoDetector(dictionary, parameters)
+corners, ids, _ = detector.detectMarkers(image)
+if ids is not None:
+    _, rvec, tvec = cv2.solvePnP(obj_pts, corners[0], K, D)
+    # Publish Pose: depth=tvec[2], lateral=tvec[0]
+\end{lstlisting}
+\begin{itemize}
+    \item Modern OpenCV 4.8+ non-deprecated API.
+    \item PnP algorithm provides distance and angle in real-time.
+\end{itemize}
+\end{frame}
+
+% --- Slide 6: Control Logic ---
+\begin{frame}{State Machine Controller}
+    \textbf{1. SEARCHING:}
+    \begin{itemize}
+        \item Rotate slowly until marker is identified.
+    \end{itemize}
+    \textbf{2. APPROACHING (Visual Servoing):}
+    \begin{itemize}
+        \item Angular: $K_a \times \text{lateral\_error}$
+        \item Linear: $K_l \times (\text{distance} - \text{stop\_dist})$
+    \end{itemize}
+    \textbf{3. DOCKED:}
+    \begin{itemize}
+        \item Stop when distance $< 0.55\text{m}$.
+    \end{itemize}
+\end{frame}
+
+% --- Slide 7: Challenges Overcome ---
+\begin{frame}{Critical Implementation Challenges}
+    \begin{alertblock}{Physics Stall}
+        Fixed caster wheel friction was originally too high, preventing motion. Fixed by setting $\mu=0$ in SDF.
+    \end{alertblock}
+    \begin{block}{Topic Scoping}
+        Gazebo Harmonic scopes topics under \texttt{/model/}. Configured explicit bridge remapping to allow ROS compatibility.
+    \end{block}
+\end{frame}
+
+% --- Slide 8: Conclusion ---
+\begin{frame}{Conclusion \& Performance}
+    \begin{itemize}
+        \item \textbf{Speed:} Rapid detection using DICT\_4X4\_50.
+        \item \textbf{Precision:} High-reliability docking accuracy.
+        \item \textbf{Scalability:} Clean, modular ROS 2 node architecture.
+    \end{itemize}
+    \begin{center}
+        \textbf{Thank You!} \\
+        Questions?
+    \end{center}
+\end{frame}
+
+\end{document}
